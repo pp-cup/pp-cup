@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Админка участников</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: 8px; }
+    th { background: #eee; }
+    button { margin: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Админка участников</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Ник</th>
+        <th>PP (join)</th>
+        <th>PP (now)</th>
+        <th>Действия</th>
+      </tr>
+    </thead>
+    <tbody id="participantTable"></tbody>
+  </table>
+
+  <button onclick="clearAll()">Очистить всех участников</button>
+
+  <script>
+    const adminKey = "mySecretKey"; // Замени на свою "секретку"
+
+    async function load() {
+      const res = await fetch("/participants");
+      const data = await res.json();
+      const tbody = document.getElementById("participantTable");
+      tbody.innerHTML = "";
+      data.forEach((p, i) => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${p.id}</td>
+            <td><input value="${p.username}" id="name-${i}" /></td>
+            <td><input type="number" value="${p.pp_at_join}" id="join-${i}" /></td>
+            <td><input type="number" value="${p.pp_now}" id="now-${i}" /></td>
+            <td>
+              <button onclick="update(${p.id}, ${i})">💾</button>
+              <button onclick="remove(${p.id})">🗑️</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    async function update(id, i) {
+      const body = {
+        id,
+        username: document.getElementById(`name-${i}`).value,
+        pp_at_join: parseFloat(document.getElementById(`join-${i}`).value),
+        pp_now: parseFloat(document.getElementById(`now-${i}`).value),
+        key: adminKey
+      };
+      await fetch("/admin/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      load();
+    }
+
+    async function remove(id) {
+      await fetch(`/admin/delete?id=${id}&key=${adminKey}`);
+      load();
+    }
+
+    async function clearAll() {
+      if (!confirm("Ты точно хочешь удалить всех участников?")) return;
+      await fetch(`/admin/clear?key=${adminKey}`);
+      load();
+    }
+
+    load();
+  </script>
+</body>
+</html>

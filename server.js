@@ -77,3 +77,35 @@ setInterval(async () => {
 app.listen(PORT, () => {
   console.log(`Сервер запущен на порту ${PORT}`);
 });
+
+const ADMIN_KEY = process.env.ADMIN_KEY || "mySecretKey"; // или укажи в Render
+
+app.post("/admin/update", (req, res) => {
+  const { key, id, username, pp_at_join, pp_now } = req.body;
+  if (key !== ADMIN_KEY) return res.status(403).send("Access denied");
+
+  const user = participants.find(p => p.id === id);
+  if (!user) return res.status(404).send("User not found");
+
+  user.username = username;
+  user.pp_at_join = pp_at_join;
+  user.pp_now = pp_now;
+
+  res.send("Updated");
+});
+
+app.get("/admin/delete", (req, res) => {
+  const { id, key } = req.query;
+  if (key !== ADMIN_KEY) return res.status(403).send("Access denied");
+
+  participants = participants.filter(p => p.id != id);
+  res.send("Deleted");
+});
+
+app.get("/admin/clear", (req, res) => {
+  const { key } = req.query;
+  if (key !== ADMIN_KEY) return res.status(403).send("Access denied");
+
+  participants = [];
+  res.send("All participants cleared");
+});
