@@ -56,8 +56,8 @@ app.get("/callback", async (req, res) => {
         avatar_url,
         pp_at_join: statistics.pp,
         pp_now: statistics.pp + 1000,
-        pp_clear: pp_now - pp_at_join,
-        points: calculatepp(pp_at_join,pp_now),
+        pp_clear: p.pp_now - p.pp_at_join,
+        points: calculatepp(p.pp_at_join,p.pp_now),
       });
     }
 
@@ -85,7 +85,7 @@ setInterval(async () => {
       console.error("Ошибка при обновлении PP:", err.message);
     }
   }
-}, 10 * 60 * 1000); // каждые 10 минут
+}, 10 * 1000); // каждые 10 минут
 
 app.listen(PORT, () => {
   console.log(`Сервер запущен на порту ${PORT}`);
