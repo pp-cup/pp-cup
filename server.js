@@ -16,6 +16,29 @@ app.get("/login", (req, res) => {
   const redirect = `https://osu.ppy.sh/oauth/authorize?client_id=${process.env.OSU_CLIENT_ID}&redirect_uri=${process.env.OSU_REDIRECT_URI}&response_type=code&scope=identify`;
   res.redirect(redirect);
 });
+function calculatePoints(pp_start, pp_end) {
+  let points = 0;
+  let from = Math.floor(pp_start);
+  let to = Math.floor(pp_end);
+
+  let startK = Math.floor(from / 1000);
+  let endK = Math.floor(to / 1000);
+
+  for (let k = startK; k <= endK; k++) {
+    let lowerBound = k * 1000;
+    let upperBound = (k + 1) * 1000;
+
+    let rangeStart = Math.max(from, lowerBound);
+    let rangeEnd = Math.min(to, upperBound);
+
+    if (rangeEnd > rangeStart) {
+      let gain = rangeEnd - rangeStart;
+      points += gain * k;
+    }
+  }
+
+  return points;
+}
 
 app.get("/callback", async (req, res) => {
   const code = req.query.code;
@@ -48,8 +71,8 @@ app.get("/callback", async (req, res) => {
         avatar_url,
         pp_at_join: statistics.pp,
         pp_now: statistics.pp + 1000,
-        pp_clear: 0,
-        points: 0,
+        pp_clear: pp_now - pp_at_join,
+        points: calculatePoints(pp_at_join, pp_now),
       });
     }
 
@@ -65,29 +88,6 @@ app.get("/participants", (req, res) => {
 });
 
 // Функция расчета очков
-function calculatePoints(pp_start, pp_end) {
-  let points = 0;
-  let from = Math.floor(pp_start);
-  let to = Math.floor(pp_end);
-
-  let startK = Math.floor(from / 1000);
-  let endK = Math.floor(to / 1000);
-
-  for (let k = startK; k <= endK; k++) {
-    let lowerBound = k * 1000;
-    let upperBound = (k + 1) * 1000;
-
-    let rangeStart = Math.max(from, lowerBound);
-    let rangeEnd = Math.min(to, upperBound);
-
-    if (rangeEnd > rangeStart) {
-      let gain = rangeEnd - rangeStart;
-      points += gain * k;
-    }
-  }
-
-  return points;
-}
 
 // Обновление pp_now каждые 10 минут
 setInterval(async () => {
