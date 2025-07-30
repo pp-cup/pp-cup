@@ -48,6 +48,8 @@ app.get("/callback", async (req, res) => {
         avatar_url,
         pp_at_join: statistics.pp,
         pp_now: statistics.pp,
+        pp_clear: 0,
+        points: 0,
       });
     }
 
@@ -68,6 +70,16 @@ setInterval(async () => {
     try {
       const userRes = await axios.get(`https://osu.ppy.sh/api/v2/users/${p.id}/osu`);
       p.pp_now = userRes.data.statistics.pp;
+      p.pp_clear = pp.pp_at_join - pp_now;
+      let pp_now1000 = parseInt((p.pp_now/1000));
+      let pp_at_join1000 = parseInt((p.pp_at_join/1000));
+      if (pp_now1000>pp_at_join1000){
+        p.points = (pp_now1000 * 1000-p.pp_at_join) * pp_at_join1000 + (p.pp_now - pp_now1000 * 1000) * pp_now1000;
+      }
+      else {
+        p.points = (p.pp_now - p.pp_at_join) * pp_now1000;
+      }
+      
     } catch (err) {
       console.error("Ошибка при обновлении PP:", err.message);
     }
