@@ -41,16 +41,8 @@ app.get("/callback", async (req, res) => {
 
     const { id, username, avatar_url, statistics } = userRes.data;
 
-    let existing = participants.find((p) => p.id === id);
-    if (!existing) {
-      participants.push({
-        id,
-        username,
-        avatar_url,
-        pp_at_join: statistics.pp,
-        pp_now: statistics.pp,
-      });
-    }
+    
+    
 
     res.redirect(`/index.html?user=${encodeURIComponent(username)}`);
   } catch (err) {
@@ -79,7 +71,7 @@ app.listen(PORT, () => {
   console.log(`Сервер запущен на порту ${PORT}`);
 });
 
-const ADMIN_KEY = process.env.ADMIN_KEY || "mySecretKey"; // или укажи в Render
+const ADMIN_KEY = process.env.ADMIN_KEY || "danya1979Dima"; // или укажи в Render
 
 app.post("/admin/update", (req, res) => {
   const { key, id, username, pp_at_join, pp_now } = req.body;

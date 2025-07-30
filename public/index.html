@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -6,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Участники osu! ивента</title>
   <style>
-     body {
+    body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       padding: 2rem;
       position: relative;
@@ -179,7 +178,7 @@
     </a>
 
     <div id="authButton">
-      <a href="/login" class="auth-button">Авторизоваться через osu!</a>
+      <a href="login" class="auth-button">Авторизоваться через osu!</a>
     </div>
 
     <div id="userMenu" style="display: none; position: relative;">
@@ -188,7 +187,6 @@
         <span id="userName"></span>
       </button>
       <div class="dropdown" id="dropdownMenu" role="menu" aria-label="User menu">
-        <button id="adminBtn" style="display:none;">Редактировать базу</button>
         <button id="profileBtn" type="button">Профиль osu!</button>
         <button type="button" onclick="logout()">Выйти</button>
       </div>
@@ -196,11 +194,16 @@
   </div>
 
   <h1>Добро пожаловать!</h1>
+
   <div id="joined" style="display:none">
     <p>Вы участвуете в ивенте!</p>
   </div>
-
+<button id="joinBtn" style="display:none; margin-bottom: 1rem; padding: 10px 20px; font-size: 16px; border-radius: 8px; cursor: pointer;">
+    Участвовать
+  </button>
   <h2>Участники:</h2>
+  
+
   <table>
     <thead>
       <tr>
@@ -229,68 +232,98 @@
 
     async function loadParticipants() {
       const res = await fetch("/participants");
-      const data = await res.json();
+      let data = await res.json();
+
       data.sort((a, b) => b.pp_now - a.pp_now);
+
       const tbody = document.getElementById("table-body");
       tbody.innerHTML = "";
       data.forEach((user, index) => {
         const profileUrl = `https://osu.ppy.sh/users/${user.id}`;
-        tbody.innerHTML += `
-          <tr>
-            <td>${index + 1}</td>
-            <td><a href="${profileUrl}" target="_blank"><img class="avatar" src="${user.avatar_url}" /></a></td>
-            <td><a href="${profileUrl}" target="_blank">${user.username}</a></td>
-            <td>${user.pp_at_join.toFixed(2)}</td>
-            <td>${user.pp_now.toFixed(2)}</td>
-          </tr>
-        `;
+        const row = `<tr>
+          <td>${index + 1}</td>
+          <td><a href="${profileUrl}" target="_blank"><img class="avatar" src="${user.avatar_url}" alt="avatar"/></a></td>
+          <td><a href="${profileUrl}" target="_blank">${user.username}</a></td>
+          <td>${user.pp_at_join.toFixed(2)}</td>
+          <td>${user.pp_now.toFixed(2)}</td>
+        </tr>`;
+        tbody.innerHTML += row;
       });
     }
 
     const urlParams = new URLSearchParams(window.location.search);
     const username = urlParams.get("user");
-
-    function checkAdmin(username) {
-      return ["lliabka", "shiretomi"].includes(username.toLowerCase());
-    }
+    const joinBtn = document.getElementById('joinBtn');
 
     if (username) {
-      document.getElementById("joined").style.display = "block";
-      fetch("/participants").then(res => res.json()).then(data => {
-        const user = data.find(u => u.username.toLowerCase() === username.toLowerCase());
-        if (user) {
-          localStorage.setItem('osuUser', JSON.stringify(user));
-          document.getElementById("userAvatar").src = user.avatar_url;
-          document.getElementById("userName").textContent = user.username;
-          document.getElementById("profileBtn").onclick = () => {
-            window.open(`https://osu.ppy.sh/users/${user.id}`, '_blank');
-          };
-          if (checkAdmin(user.username)) {
-            document.getElementById("adminBtn").style.display = "block";
-            document.getElementById("adminBtn").onclick = () => window.location.href = "/admin.html";
+      fetch("/participants")
+        .then(res => res.json())
+        .then(data => {
+          const user = data.find(u => u.username === username);
+          if (user) {
+            localStorage.setItem('osuUser', JSON.stringify(user));
+            setupUser(user);
           }
-          document.getElementById("authButton").style.display = "none";
-          document.getElementById("userMenu").style.display = "block";
-        }
-      });
+        });
     } else {
-      const savedUser = localStorage.getItem("osuUser");
+      const savedUser = localStorage.getItem('osuUser');
       if (savedUser) {
         const user = JSON.parse(savedUser);
-        document.getElementById("joined").style.display = "block";
-        document.getElementById("userAvatar").src = user.avatar_url;
-        document.getElementById("userName").textContent = user.username;
-        document.getElementById("profileBtn").onclick = () => {
-          window.open(`https://osu.ppy.sh/users/${user.id}`, '_blank');
-        };
-        if (checkAdmin(user.username)) {
-          document.getElementById("adminBtn").style.display = "block";
-          document.getElementById("adminBtn").onclick = () => window.location.href = "/admin.html";
-        }
-        document.getElementById("authButton").style.display = "none";
-        document.getElementById("userMenu").style.display = "block";
+        setupUser(user);
       }
     }
+
+    function setupUser(user) {
+      document.getElementById("userAvatar").src = user.avatar_url;
+      document.getElementById("userName").textContent = user.username;
+      document.getElementById("profileBtn").onclick = () => {
+        window.open(`https://osu.ppy.sh/users/${user.id}`, '_blank');
+      }
+      document.getElementById("authButton").style.display = "none";
+      document.getElementById("userMenu").style.display = "block";
+
+      fetch("/participants")
+        .then(res => res.json())
+        .then(data => {
+          const isInList = data.some(u => u.username === user.username);
+          if (!isInList) {
+            joinBtn.style.display = "inline-block";
+          } else {
+            document.getElementById("joined").style.display = "block";
+          }
+        });
+    }
+
+    joinBtn.addEventListener('click', async () => {
+      const user = JSON.parse(localStorage.getItem('osuUser'));
+      if (!user) {
+        alert("Сначала авторизуйтесь!");
+        return;
+      }
+
+      try {
+        const res = await fetch("/participants", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: user.id,
+            username: user.username,
+            avatar_url: user.avatar_url,
+            pp: user.pp_now
+          })
+        });
+
+        if (res.ok) {
+          document.getElementById("joined").style.display = "block";
+          joinBtn.style.display = "none";
+          loadParticipants();
+        } else {
+          alert("Ошибка при добавлении");
+        }
+      } catch (err) {
+        alert("Ошибка при отправке запроса");
+      }
+    });
 
     loadParticipants();
   </script>
