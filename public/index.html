@@ -188,6 +188,7 @@
       </button>
       <div class="dropdown" id="dropdownMenu" role="menu" aria-label="User menu">
         <button id="profileBtn" type="button">Профиль osu!</button>
+        <a id="adminLink" href="admin.html" style="display: none; margin-top: 10px; font-weight: bold; color: red;">Редактировать базу</a>
         <button type="button" onclick="logout()">Выйти</button>
       </div>
     </div>
@@ -272,7 +273,9 @@
         setupUser(user);
       }
     }
-
+    if (user.username === "LLIaBKa" || user.username === "Shiretomi") {
+  document.getElementById("adminLink").style.display = "inline-block";
+}
     function setupUser(user) {
       document.getElementById("userAvatar").src = user.avatar_url;
       document.getElementById("userName").textContent = user.username;
