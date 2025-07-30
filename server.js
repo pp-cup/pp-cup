@@ -7,6 +7,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000; // ✅ Render требует использовать process.env.PORT
 
+
 let participants = [];
 
 app.use(express.static("public"));
