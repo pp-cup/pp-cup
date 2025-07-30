@@ -219,6 +219,9 @@
   </table>
 
   <script>
+    if (user.username === "LLIaBKa" || user.username === "Shiretomi") {
+    document.getElementById("adminLink").style.display = "inline-block";
+    }
     function toggleDropdown() {
       const menu = document.getElementById('dropdownMenu');
       const expanded = menu.style.display === 'block';
@@ -273,9 +276,7 @@
         setupUser(user);
       }
     }
-    if (user.username === "LLIaBKa" || user.username === "Shiretomi") {
-  document.getElementById("adminLink").style.display = "inline-block";
-}
+    
     function setupUser(user) {
       document.getElementById("userAvatar").src = user.avatar_url;
       document.getElementById("userName").textContent = user.username;
