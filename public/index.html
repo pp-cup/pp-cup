@@ -188,7 +188,7 @@
       </button>
       <div class="dropdown" id="dropdownMenu" role="menu" aria-label="User menu">
         <button id="profileBtn" type="button">Профиль osu!</button>
-        <button id="adminLink" type="button" style="color: red;">Редактировать базу</button>
+        <button id="adminLink" type="button" style="display:none;">Редактировать базу</button>
         <button type="button" onclick="logout()">Выйти</button>
       </div>
     </div>
@@ -265,6 +265,9 @@
             document.getElementById("userName").textContent = user.username;
             document.getElementById("profileBtn").onclick = () => {
               window.open(`https://osu.ppy.sh/users/${user.id}`, '_blank');
+            }
+            document.getElementById("adminLink").onclick = () => {
+              window.open(`https://pp-cup.onrender.com/admin.html`);
             }
             document.getElementById("authButton").style.display = "none";
             document.getElementById("userMenu").style.display = "block";
