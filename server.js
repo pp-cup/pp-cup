@@ -79,7 +79,7 @@ setInterval(async () => {
       const userRes = await axios.get(`https://osu.ppy.sh/api/v2/users/${p.id}/osu`);
       p.pp_now = userRes.data.statistics.pp;
       p.pp_clear = p.pp_now - p.pp_at_join;
-      p.points = calculatepp(p.pp_at_join,p.pp_now),
+      p.points = calculatepp(p.pp_at_join,p.pp_now);
       
     } catch (err) {
       console.error("Ошибка при обновлении PP:", err.message);
