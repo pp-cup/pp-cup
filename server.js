@@ -70,7 +70,7 @@ setInterval(async () => {
     try {
       const userRes = await axios.get(`https://osu.ppy.sh/api/v2/users/${p.id}/osu`);
       p.pp_now = userRes.data.statistics.pp;
-      p.pp_clear = pp.pp_at_join - pp_now;
+      p.pp_clear = p.pp_now - p.pp_at_join;
       let pp_now1000 = parseInt((p.pp_now/1000));
       let pp_at_join1000 = parseInt((p.pp_at_join/1000));
       if (pp_now1000>pp_at_join1000){
