@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -32,18 +31,22 @@
   </table>
 
   <script>
-    const adminKey = "danya1979Dima"; // Заменить на актуальный ключ
+    const adminKey = "mySecretKey"; // Замени на свой реальный ключ из .env
 
     async function loadParticipants() {
       try {
         const res = await fetch("/participants");
         const data = await res.json();
+        console.log("Участники получены:", data);
+
         const tbody = document.getElementById("participantTable");
         tbody.innerHTML = "";
-        if (data.length === 0) {
+
+        if (!Array.isArray(data) || data.length === 0) {
           tbody.innerHTML = '<tr><td colspan="5">Нет участников.</td></tr>';
           return;
         }
+
         data.forEach(p => {
           const row = document.createElement("tr");
           row.innerHTML = `
@@ -56,25 +59,23 @@
           tbody.appendChild(row);
         });
       } catch (err) {
-        alert("Ошибка при загрузке участников.");
-        console.error(err);
+        console.error("Ошибка при загрузке участников:", err);
+        alert("Не удалось загрузить участников.");
       }
     }
 
     async function deleteParticipant(id) {
-      const confirmDelete = confirm("Удалить этого участника?");
-      if (!confirmDelete) return;
-
+      if (!confirm("Удалить этого участника?")) return;
       try {
-        const res = await fetch(\`/admin/delete?id=\${id}&key=\${adminKey}\`);
+        const res = await fetch("/admin/delete?id=" + id + "&key=" + adminKey);
         if (res.ok) {
           loadParticipants();
         } else {
-          alert("Ошибка при удалении.");
+          alert("Ошибка удаления.");
         }
       } catch (err) {
-        alert("Ошибка при отправке запроса.");
-        console.error(err);
+        console.error("Ошибка при удалении:", err);
+        alert("Ошибка при удалении.");
       }
     }
 
