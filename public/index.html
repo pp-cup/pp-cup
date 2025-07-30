@@ -178,7 +178,7 @@
     </a>
 
     <div id="authButton">
-      <a href="login" class="auth-button">Авторизоваться через osu!</a>
+      <a href="/login" class="auth-button">Авторизоваться через osu!</a>
     </div>
 
     <div id="userMenu" style="display: none; position: relative;">
@@ -188,23 +188,18 @@
       </button>
       <div class="dropdown" id="dropdownMenu" role="menu" aria-label="User menu">
         <button id="profileBtn" type="button">Профиль osu!</button>
-        <a id="adminLink" href="admin.html" style="display: none; margin-top: 10px; font-weight: bold; color: red;">Редактировать базу</a>
         <button type="button" onclick="logout()">Выйти</button>
       </div>
     </div>
   </div>
 
   <h1>Добро пожаловать!</h1>
-
   <div id="joined" style="display:none">
     <p>Вы участвуете в ивенте!</p>
+    
   </div>
-<button id="joinBtn" style="display:none; margin-bottom: 1rem; padding: 10px 20px; font-size: 16px; border-radius: 8px; cursor: pointer;">
-    Участвовать
-  </button>
-  <h2>Участники:</h2>
-  
 
+  <h2>Участники:</h2>
   <table>
     <thead>
       <tr>
@@ -219,7 +214,6 @@
   </table>
 
   <script>
-    
     function toggleDropdown() {
       const menu = document.getElementById('dropdownMenu');
       const expanded = menu.style.display === 'block';
@@ -236,6 +230,7 @@
       const res = await fetch("/participants");
       let data = await res.json();
 
+      // Сортируем участников по текущему pp (pp_now) по убыванию
       data.sort((a, b) => b.pp_now - a.pp_now);
 
       const tbody = document.getElementById("table-body");
@@ -244,8 +239,8 @@
         const profileUrl = `https://osu.ppy.sh/users/${user.id}`;
         const row = `<tr>
           <td>${index + 1}</td>
-          <td><a href="${profileUrl}" target="_blank"><img class="avatar" src="${user.avatar_url}" alt="avatar"/></a></td>
-          <td><a href="${profileUrl}" target="_blank">${user.username}</a></td>
+          <td><a href="${profileUrl}" target="_blank" rel="noopener noreferrer"><img class="avatar" src="${user.avatar_url}" alt="avatar"/></a></td>
+          <td><a href="${profileUrl}" target="_blank" rel="noopener noreferrer">${user.username}</a></td>
           <td>${user.pp_at_join.toFixed(2)}</td>
           <td>${user.pp_now.toFixed(2)}</td>
         </tr>`;
@@ -255,79 +250,39 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     const username = urlParams.get("user");
-    const joinBtn = document.getElementById('joinBtn');
 
     if (username) {
+      document.getElementById("joined").style.display = "block";
+
       fetch("/participants")
         .then(res => res.json())
         .then(data => {
           const user = data.find(u => u.username === username);
           if (user) {
             localStorage.setItem('osuUser', JSON.stringify(user));
-            setupUser(user);
+            document.getElementById("userAvatar").src = user.avatar_url;
+            document.getElementById("userName").textContent = user.username;
+            document.getElementById("profileBtn").onclick = () => {
+              window.open(`https://osu.ppy.sh/users/${user.id}`, '_blank');
+            }
+            document.getElementById("authButton").style.display = "none";
+            document.getElementById("userMenu").style.display = "block";
           }
         });
     } else {
       const savedUser = localStorage.getItem('osuUser');
       if (savedUser) {
         const user = JSON.parse(savedUser);
-        setupUser(user);
-      }
-    }
-    if(username == "LLIaBKa") {
-      document.getElementById('adminLink').style.display = "block";
-    }
-    function setupUser(user) {
-      document.getElementById("userAvatar").src = user.avatar_url;
-      document.getElementById("userName").textContent = user.username;
-      document.getElementById("profileBtn").onclick = () => {
-        window.open(`https://osu.ppy.sh/users/${user.id}`, '_blank');
-      }
-      document.getElementById("authButton").style.display = "none";
-      document.getElementById("userMenu").style.display = "block";
-
-      fetch("/participants")
-        .then(res => res.json())
-        .then(data => {
-          const isInList = data.some(u => u.username === user.username);
-          if (!isInList) {
-            joinBtn.style.display = "inline-block";
-          } else {
-            document.getElementById("joined").style.display = "block";
-          }
-        });
-    }
-
-    joinBtn.addEventListener('click', async () => {
-      const user = JSON.parse(localStorage.getItem('osuUser'));
-      if (!user) {
-        alert("Сначала авторизуйтесь!");
-        return;
-      }
-
-      try {
-        const res = await fetch("/participants", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: user.id,
-            username: user.username,
-            avatar_url: user.avatar_url,
-            pp: user.pp_now
-          })
-        });
-
-        if (res.ok) {
-          document.getElementById("joined").style.display = "block";
-          joinBtn.style.display = "none";
-          loadParticipants();
-        } else {
-          alert("Ошибка при добавлении");
+        document.getElementById("joined").style.display = "block";
+        document.getElementById("userAvatar").src = user.avatar_url;
+        document.getElementById("userName").textContent = user.username;
+        document.getElementById("profileBtn").onclick = () => {
+          window.open(`https://osu.ppy.sh/users/${user.id}`, '_blank');
         }
-      } catch (err) {
-        alert("Ошибка при отправке запроса");
+        document.getElementById("authButton").style.display = "none";
+        document.getElementById("userMenu").style.display = "block";
       }
-    });
+    }
 
     loadParticipants();
   </script>
