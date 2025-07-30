@@ -15,7 +15,7 @@ app.use(express.json());
 
 app.get("/login", (req, res) => {
   const redirect = `https://osu.ppy.sh/oauth/authorize?client_id=${process.env.OSU_CLIENT_ID}&redirect_uri=${process.env.OSU_REDIRECT_URI}&response_type=code&scope=identify`;
-  res.redirect(`/index.html?id=${id}&username=${encodeURIComponent(username)}&avatar_url=${encodeURIComponent(avatar_url)}&pp=${statistics.pp}`);
+  res.redirect(`/index.html?id=${id}&username=${encodeURIComponent(username)}&avatar_url=${encodeURIComponent(avatar_url)}&pp=${encodeURIComponent(statistics.pp)}`);
 });
 
 app.get("/callback", async (req, res) => {
