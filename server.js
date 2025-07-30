@@ -9,8 +9,8 @@ const PORT = process.env.PORT || 3000;
 
 let participants = [];
 let osuAccessToken = null;
-app.use(express.static("public"));
-app.use(express.json());
+
+// Функция для получения access token (client_credentials flow)
 async function fetchOsuAccessToken() {
   try {
     const res = await axios.post(
@@ -19,7 +19,7 @@ async function fetchOsuAccessToken() {
         client_id: process.env.OSU_CLIENT_ID,
         client_secret: process.env.OSU_CLIENT_SECRET,
         grant_type: "client_credentials",
-        scope: "public"
+        scope: "public",
       },
       { headers: { "Content-Type": "application/json" } }
     );
@@ -29,7 +29,8 @@ async function fetchOsuAccessToken() {
     console.error("Не удалось получить osu! токен:", err.message);
   }
 }
-// 🔢 Функция расчёта очков
+
+// Функция расчёта очков
 function calculatePoints(pp_start, pp_end) {
   let points = 0;
   let from = Math.floor(pp_start);
@@ -54,13 +55,14 @@ function calculatePoints(pp_start, pp_end) {
   return points;
 }
 
-// 🌐 Авторизация через OAuth
+app.use(express.static("public"));
+app.use(express.json());
+
 app.get("/login", (req, res) => {
   const redirect = `https://osu.ppy.sh/oauth/authorize?client_id=${process.env.OSU_CLIENT_ID}&redirect_uri=${process.env.OSU_REDIRECT_URI}&response_type=code&scope=identify`;
   res.redirect(redirect);
 });
 
-// 📥 Обработка OAuth-колбэка
 app.get("/callback", async (req, res) => {
   const code = req.query.code;
   try {
@@ -87,7 +89,7 @@ app.get("/callback", async (req, res) => {
     let existing = participants.find((p) => p.id === id);
     if (!existing) {
       const pp_at_join = statistics.pp;
-      const pp_now = pp_at_join + 1000; // для тестов, +1000
+      const pp_now = pp_at_join + 1000; // для тестов
       const pp_clear = pp_now - pp_at_join;
       const points = calculatePoints(pp_at_join, pp_now);
 
@@ -109,30 +111,37 @@ app.get("/callback", async (req, res) => {
   }
 });
 
-// 📤 Получение списка участников
 app.get("/participants", (req, res) => {
   res.json(participants);
 });
 
-// 🔁 Автообновление каждые 10 минут
+// Автообновление pp_now каждые 10 минут (600000 мс)
 setInterval(async () => {
+  if (!osuAccessToken) {
+    console.log("Нет токена osu! — пытаюсь получить...");
+    await fetchOsuAccessToken();
+    if (!osuAccessToken) return;
+  }
+
   for (let p of participants) {
     try {
       const userRes = await axios.get(`https://osu.ppy.sh/api/v2/users/${p.id}/osu`, {
-  headers: {
-    Authorization: `Bearer ${osuAccessToken}`,
-  },
-});
+        headers: { Authorization: `Bearer ${osuAccessToken}` },
+      });
       p.pp_now = userRes.data.statistics.pp;
       p.pp_clear = p.pp_now - p.pp_at_join;
       p.points = calculatePoints(p.pp_at_join, p.pp_now);
+      console.log(`[UPDATE] ${p.username}: now=${p.pp_now}, at_join=${p.pp_at_join}, clear=${p.pp_clear}, points=${p.points}`);
     } catch (err) {
       console.error("Ошибка при обновлении PP:", err.message);
+      // При 401 попробуем получить новый токен
+      if (err.response && err.response.status === 401) {
+        osuAccessToken = null;
+      }
     }
   }
-}, 10 * 1000); // каждые 10 минут
+}, 10  * 1000);
 
-// 🛠️ Админ-функции
 const ADMIN_KEY = process.env.ADMIN_KEY || "danya1979Dima";
 
 app.post("/admin/update", (req, res) => {
@@ -166,9 +175,8 @@ app.get("/admin/clear", (req, res) => {
   participants = [];
   res.send("All participants cleared");
 });
-await fetchOsuAccessToken();
-setInterval(fetchOsuAccessToken, 60 * 60 * 1000);
-// 🚀 Запуск сервера
-app.listen(PORT, () => {
+
+app.listen(PORT, async () => {
   console.log(`Сервер запущен на порту ${PORT}`);
+  await fetchOsuAccessToken();
 });
