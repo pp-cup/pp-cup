@@ -86,7 +86,23 @@ app.post("/admin/update", (req, res) => {
 
   res.send("Updated");
 });
+app.post("/participants", (req, res) => {
+  const { id, username, avatar_url, pp } = req.body;
 
+  if (participants.find(p => p.id === id)) {
+    return res.status(400).json({ message: "Уже в списке" });
+  }
+
+  participants.push({
+    id,
+    username,
+    avatar_url,
+    pp_at_join: pp,
+    pp_now: pp
+  });
+
+  res.json({ success: true });
+});
 app.get("/admin/delete", (req, res) => {
   const { id, key } = req.query;
   if (key !== ADMIN_KEY) return res.status(403).send("Access denied");
