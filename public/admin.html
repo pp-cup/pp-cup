@@ -13,7 +13,7 @@
     button:hover { background: #c53030; }
   </style>
 </head>
-<body>
+<body style="display: none;">
   <h1>Участники (Редактор)</h1>
   <table>
     <thead>
@@ -32,7 +32,9 @@
 
   <script>
     const adminKey = "danya1979Dima"; // Замени на свой реальный ключ из .env
-
+    if (username=='LLIaBKa'){
+      document.body.style.display = 'block';
+    }
     async function loadParticipants() {
       try {
         const res = await fetch("/participants");
