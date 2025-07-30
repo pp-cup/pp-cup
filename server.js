@@ -5,7 +5,7 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000; // ✅ Render требует использовать process.env.PORT
 
 let participants = [];
 
@@ -75,5 +75,5 @@ setInterval(async () => {
 }, 10 * 60 * 1000); // каждые 10 минут
 
 app.listen(PORT, () => {
-  console.log(`Сервер запущен: http://localhost:${PORT}`);
+  console.log(`Сервер запущен на порту ${PORT}`);
 });
