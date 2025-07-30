@@ -1,86 +1,103 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Админка участников</title>
+  <title>Редактирование участников</title>
   <style>
-
-    body { font-family: sans-serif; padding: 20px; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #ccc; padding: 8px; }
-    th { background: #eee; }
-    button { margin: 4px; }
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background: #f9fafb;
+      color: #333;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      overflow: hidden;
+    }
+    th, td {
+      border: 1px solid #e0e3e7;
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background: #f0f2f5;
+      font-weight: 600;
+    }
+    tr:hover {
+      background-color: #f5f7fa;
+    }
+    button {
+      padding: 6px 12px;
+      border: none;
+      background: #e53e3e;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #c53030;
+    }
   </style>
 </head>
 <body>
-  <h1>Админка участников</h1>
+  <h1>Участники (Редактирование)</h1>
   <table>
     <thead>
       <tr>
         <th>ID</th>
         <th>Ник</th>
-        <th>PP (join)</th>
-        <th>PP (now)</th>
-        <th>Действия</th>
+        <th>PP при вступлении</th>
+        <th>PP сейчас</th>
+        <th>Удаление</th>
       </tr>
     </thead>
     <tbody id="participantTable"></tbody>
   </table>
 
-  <button onclick="clearAll()">Очистить всех участников</button>
-
   <script>
-    const adminKey = "mySecretKey"; // Замени на свою "секретку"
+    const adminKey = "mySecretKey"; // замени на значение из .env (ADMIN_KEY)
 
-    async function load() {
+    async function loadParticipants() {
       const res = await fetch("/participants");
       const data = await res.json();
       const tbody = document.getElementById("participantTable");
       tbody.innerHTML = "";
-      data.forEach((p, i) => {
-        tbody.innerHTML += `
-          <tr>
-            <td>${p.id}</td>
-            <td><input value="${p.username}" id="name-${i}" /></td>
-            <td><input type="number" value="${p.pp_at_join}" id="join-${i}" /></td>
-            <td><input type="number" value="${p.pp_now}" id="now-${i}" /></td>
-            <td>
-              <button onclick="update(${p.id}, ${i})">💾</button>
-              <button onclick="remove(${p.id})">🗑️</button>
-            </td>
-          </tr>
+
+      data.forEach(p => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${p.id}</td>
+          <td>${p.username}</td>
+          <td>${p.pp_at_join}</td>
+          <td>${p.pp_now}</td>
+          <td><button onclick="deleteParticipant(${p.id})">🗑️</button></td>
         `;
+        tbody.appendChild(row);
       });
     }
 
-    async function update(id, i) {
-      const body = {
-        id,
-        username: document.getElementById(`name-${i}`).value,
-        pp_at_join: parseFloat(document.getElementById(`join-${i}`).value),
-        pp_now: parseFloat(document.getElementById(`now-${i}`).value),
-        key: adminKey
-      };
-      await fetch("/admin/update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      load();
+    async function deleteParticipant(id) {
+      const confirmDelete = confirm("Удалить этого участника?");
+      if (!confirmDelete) return;
+
+      const res = await fetch(\`/admin/delete?id=\${id}&key=\${adminKey}\`);
+      if (res.ok) {
+        loadParticipants();
+      } else {
+        alert("Ошибка при удалении.");
+      }
     }
 
-    async function remove(id) {
-      await fetch(`/admin/delete?id=${id}&key=${adminKey}`);
-      load();
-    }
-
-    async function clearAll() {
-      if (!confirm("Ты точно хочешь удалить всех участников?")) return;
-      await fetch(`/admin/clear?key=${adminKey}`);
-      load();
-    }
-
-    load();
+    loadParticipants();
   </script>
 </body>
 </html>
