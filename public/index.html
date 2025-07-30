@@ -247,6 +247,8 @@
           <td><a href="${profileUrl}" target="_blank" rel="noopener noreferrer">${user.username}</a></td>
           <td>${user.pp_at_join.toFixed(2)}</td>
           <td>${user.pp_now.toFixed(2)}</td>
+          <td>${(user.pp_clear || 0).toFixed(2)}</td>
+          <td>${Math.floor(user.points || 0)}</td>
         </tr>`;
         tbody.innerHTML += row;
       });
