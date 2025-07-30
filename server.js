@@ -8,10 +8,27 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 let participants = [];
-
+let osuAccessToken = null;
 app.use(express.static("public"));
 app.use(express.json());
-
+async function fetchOsuAccessToken() {
+  try {
+    const res = await axios.post(
+      "https://osu.ppy.sh/oauth/token",
+      {
+        client_id: process.env.OSU_CLIENT_ID,
+        client_secret: process.env.OSU_CLIENT_SECRET,
+        grant_type: "client_credentials",
+        scope: "public"
+      },
+      { headers: { "Content-Type": "application/json" } }
+    );
+    osuAccessToken = res.data.access_token;
+    console.log("osu! access token получен");
+  } catch (err) {
+    console.error("Не удалось получить osu! токен:", err.message);
+  }
+}
 // 🔢 Функция расчёта очков
 function calculatePoints(pp_start, pp_end) {
   let points = 0;
@@ -101,7 +118,11 @@ app.get("/participants", (req, res) => {
 setInterval(async () => {
   for (let p of participants) {
     try {
-      const userRes = await axios.get(`https://osu.ppy.sh/api/v2/users/${p.id}/osu`);
+      const userRes = await axios.get(`https://osu.ppy.sh/api/v2/users/${p.id}/osu`, {
+  headers: {
+    Authorization: `Bearer ${osuAccessToken}`,
+  },
+});
       p.pp_now = userRes.data.statistics.pp;
       p.pp_clear = p.pp_now - p.pp_at_join;
       p.points = calculatePoints(p.pp_at_join, p.pp_now);
@@ -145,7 +166,8 @@ app.get("/admin/clear", (req, res) => {
   participants = [];
   res.send("All participants cleared");
 });
-
+await fetchOsuAccessToken();
+setInterval(fetchOsuAccessToken, 60 * 60 * 1000);
 // 🚀 Запуск сервера
 app.listen(PORT, () => {
   console.log(`Сервер запущен на порту ${PORT}`);
