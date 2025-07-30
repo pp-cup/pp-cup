@@ -41,7 +41,7 @@ app.get("/callback", async (req, res) => {
     const { id, username, avatar_url, statistics } = userRes.data;
 
     let existing = participants.find((p) => p.id === id);
-    /*if (!existing) {
+    if (!existing) {
       participants.push({
         id,
         username,
@@ -49,7 +49,7 @@ app.get("/callback", async (req, res) => {
         pp_at_join: statistics.pp,
         pp_now: statistics.pp,
       });
-    }*/
+    }
 
     res.redirect(`/index.html?user=${encodeURIComponent(username)}`);
   } catch (err) {
