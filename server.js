@@ -12,10 +12,7 @@ let participants = [];
 app.use(express.static("public"));
 app.use(express.json());
 
-app.get("/login", (req, res) => {
-  const redirect = `https://osu.ppy.sh/oauth/authorize?client_id=${process.env.OSU_CLIENT_ID}&redirect_uri=${process.env.OSU_REDIRECT_URI}&response_type=code&scope=identify`;
-  res.redirect(redirect);
-});
+// 🔢 Функция расчёта очков
 function calculatePoints(pp_start, pp_end) {
   let points = 0;
   let from = Math.floor(pp_start);
@@ -40,6 +37,13 @@ function calculatePoints(pp_start, pp_end) {
   return points;
 }
 
+// 🌐 Авторизация через OAuth
+app.get("/login", (req, res) => {
+  const redirect = `https://osu.ppy.sh/oauth/authorize?client_id=${process.env.OSU_CLIENT_ID}&redirect_uri=${process.env.OSU_REDIRECT_URI}&response_type=code&scope=identify`;
+  res.redirect(redirect);
+});
+
+// 📥 Обработка OAuth-колбэка
 app.get("/callback", async (req, res) => {
   const code = req.query.code;
   try {
@@ -65,14 +69,19 @@ app.get("/callback", async (req, res) => {
 
     let existing = participants.find((p) => p.id === id);
     if (!existing) {
+      const pp_at_join = statistics.pp;
+      const pp_now = pp_at_join + 1000; // для тестов, +1000
+      const pp_clear = pp_now - pp_at_join;
+      const points = calculatePoints(pp_at_join, pp_now);
+
       participants.push({
         id,
         username,
         avatar_url,
-        pp_at_join: statistics.pp,
-        pp_now: statistics.pp + 1000,
-        pp_clear: pp_now - pp_at_join,
-        points: calculatePoints(pp_at_join, pp_now),
+        pp_at_join,
+        pp_now,
+        pp_clear,
+        points,
       });
     }
 
@@ -83,13 +92,12 @@ app.get("/callback", async (req, res) => {
   }
 });
 
+// 📤 Получение списка участников
 app.get("/participants", (req, res) => {
   res.json(participants);
 });
 
-// Функция расчета очков
-
-// Обновление pp_now каждые 10 минут
+// 🔁 Автообновление каждые 10 минут
 setInterval(async () => {
   for (let p of participants) {
     try {
@@ -101,15 +109,11 @@ setInterval(async () => {
       console.error("Ошибка при обновлении PP:", err.message);
     }
   }
-}, 10 * 1000); // каждые 10 минут
+}, 10 * 60 * 1000); // каждые 10 минут
 
-app.listen(PORT, () => {
-  console.log(`Сервер запущен на порту ${PORT}`);
-});
-
+// 🛠️ Админ-функции
 const ADMIN_KEY = process.env.ADMIN_KEY || "danya1979Dima";
 
-// Админ-обновление вручную
 app.post("/admin/update", (req, res) => {
   const { key, id, username, pp_at_join, pp_now } = req.body;
   if (key !== ADMIN_KEY) return res.status(403).send("Access denied");
@@ -119,7 +123,7 @@ app.post("/admin/update", (req, res) => {
 
   user.username = username;
   user.pp_at_join = pp_at_join;
-  user.pp_now = pp_now+1000;
+  user.pp_now = pp_now;
   user.pp_clear = pp_now - pp_at_join;
   user.points = calculatePoints(pp_at_join, pp_now);
 
@@ -140,4 +144,9 @@ app.get("/admin/clear", (req, res) => {
 
   participants = [];
   res.send("All participants cleared");
+});
+
+// 🚀 Запуск сервера
+app.listen(PORT, () => {
+  console.log(`Сервер запущен на порту ${PORT}`);
 });
