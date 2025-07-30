@@ -101,7 +101,7 @@ setInterval(async () => {
       console.error("Ошибка при обновлении PP:", err.message);
     }
   }
-}, 10 * 60 * 1000); // каждые 10 минут
+}, 10 * 1000); // каждые 10 минут
 
 app.listen(PORT, () => {
   console.log(`Сервер запущен на порту ${PORT}`);
