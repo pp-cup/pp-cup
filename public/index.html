@@ -199,7 +199,9 @@
   <div id="joined" style="display:none">
     <p>Вы участвуете в ивенте!</p>
   </div>
-
+<button id="joinBtn" style="display:none; margin-bottom: 1rem; padding: 10px 20px; font-size: 16px; border-radius: 8px; cursor: pointer;">
+    Участвовать
+  </button>
   <h2>Участники:</h2>
   
 
@@ -253,7 +255,7 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     const username = urlParams.get("user");
-    
+    const joinBtn = document.getElementById('joinBtn');
 
     if (username) {
       fetch("/participants")
@@ -289,7 +291,7 @@
         .then(data => {
           const isInList = data.some(u => u.username === user.username);
           if (!isInList) {
-            document.getElementById("joined").style.display = "none";
+            joinBtn.style.display = "inline-block";
           } else {
             document.getElementById("joined").style.display = "block";
           }
