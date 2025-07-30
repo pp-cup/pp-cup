@@ -40,8 +40,8 @@ app.get("/callback", async (req, res) => {
 
     const { id, username, avatar_url, statistics } = userRes.data;
 
-   /* let existing = participants.find((p) => p.id === id);
-    if (!existing) {
+    let existing = participants.find((p) => p.id === id);
+    /*if (!existing) {
       participants.push({
         id,
         username,
