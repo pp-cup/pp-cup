@@ -3,333 +3,147 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Участники osu! ивента</title>
+  <title>PP Cup</title>
   <style>
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      padding: 2rem;
-      position: relative;
-      background: linear-gradient(135deg, #f9fafb 0%, #e6e9ec 100%);
-      color: #333;
-      margin: 0;
-      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      padding: 20px;
     }
-
     table {
-      border-collapse: separate;
-      border-spacing: 0 8px;
+      border-collapse: collapse;
       width: 100%;
-      margin-top: 2rem;
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      margin-top: 20px;
     }
-
     th, td {
-      padding: 12px 16px;
+      border: 1px solid #ccc;
+      padding: 8px;
       text-align: center;
     }
-
     th {
-      background: #f0f2f5;
-      font-weight: 600;
-      color: #555;
-      border-bottom: 2px solid #e0e3e7;
+      background-color: #f2f2f2;
     }
-
-    tbody tr {
-      background: #fff;
-      transition: background-color 0.3s ease;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    #userInfo {
+      margin-bottom: 20px;
     }
-
-    tbody tr:hover {
-      background: #f5f7fa;
-    }
-
-    table img.avatar {
-      width: 72px;
-      height: 72px;
+    #userAvatar {
+      width: 50px;
+      height: 50px;
       border-radius: 50%;
-      object-fit: cover;
-      transition: transform 0.3s ease;
-    }
-
-    table img.avatar:hover {
-      transform: scale(1.1);
-    }
-
-    .user-menu {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .discord-button {
-      background-color: #fff;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
-      padding: 0;
-      height: 42px;
-      width: 42px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      text-decoration: none;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-      transition: background-color 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .discord-button:hover {
-      background-color: #f3f4f6;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-
-    .discord-button img {
-      height: 24px;
-      width: 24px;
-      filter: grayscale(100%);
-      display: block;
-    }
-
-    .auth-button,
-    .user-button {
-      display: flex;
-      align-items: center;
-      background: #fff;
-      border: 1px solid #d1d5db;
-      padding: 0 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      height: 42px;
-      font-size: 16px;
-      font-weight: 600;
-      color: #333;
-      text-decoration: none;
-      user-select: none;
-      white-space: nowrap;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-      transition: background-color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-    }
-
-    .auth-button:hover,
-    .user-button:hover {
-      background-color: #f3f4f6;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      border-color: #a1a5aa;
-    }
-
-    .user-button img {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      object-fit: cover;
-      margin-right: 10px;
-      flex-shrink: 0;
-    }
-
-    .user-button span {
-      line-height: 42px;
-      height: 42px;
-      display: inline-block;
       vertical-align: middle;
+      margin-right: 10px;
     }
-
-    .dropdown {
+    #joinBtn {
+      margin-top: 10px;
       display: none;
-      position: absolute;
-      right: 0;
-      background-color: #fff;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
-      margin-top: 5px;
-      min-width: 150px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      z-index: 10;
     }
-
-    .dropdown button {
-      width: 100%;
-      padding: 0.5rem 1rem;
-      border: none;
-      background: none;
-      text-align: left;
-      cursor: pointer;
-      font-size: 14px;
-      color: #333;
-      transition: background-color 0.3s ease;
-      border-radius: 4px;
-    }
-
-    .dropdown button:hover {
-      background-color: #f3f4f6;
+    #adminLink {
+      display: none;
+      font-weight: bold;
+      color: red;
+      margin-top: 10px;
+      display: inline-block;
     }
   </style>
 </head>
 <body>
-  <div class="user-menu">
-    <a href="https://discord.gg/4M5jDGDX96" target="_blank" class="discord-button" title="Наш Discord">
-      <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/discord.svg" alt="Discord" />
-    </a>
+  <h1>PP Cup Участники</h1>
 
-    <div id="authButton">
-      <a href="login" class="auth-button">Авторизоваться через osu!</a>
-    </div>
-
-    <div id="userMenu" style="display: none; position: relative;">
-      <button class="user-button" onclick="toggleDropdown()" type="button" aria-haspopup="true" aria-expanded="false">
-        <img id="userAvatar" src="" alt="avatar" />
-        <span id="userName"></span>
-      </button>
-      <div class="dropdown" id="dropdownMenu" role="menu" aria-label="User menu">
-        <button id="profileBtn" type="button">Профиль osu!</button>
-        <a id="adminLink" href="admin.html" style="display: none; margin-top: 10px; font-weight: bold; color: red;">Редактировать базу</a>
-        <button type="button" onclick="logout()">Выйти</button>
-      </div>
-    </div>
+  <div id="userInfo">
+    <img id="userAvatar" src="" alt="Аватар" />
+    <span id="userName"></span>
+    <p id="joined" style="display: none;">Вы уже участвуете ✅</p>
+    <button id="joinBtn">Участвовать</button><br>
+    <a id="adminLink" href="admin.html">Редактировать базу</a>
   </div>
 
-  <h1>Добро пожаловать!</h1>
-
-  <div id="joined" style="display:none">
-    <p>Вы участвуете в ивенте!</p>
-  </div>
-<button id="joinBtn" style="display:none; margin-bottom: 1rem; padding: 10px 20px; font-size: 16px; border-radius: 8px; cursor: pointer;">
-    Участвовать
-  </button>
-  <h2>Участники:</h2>
-  
-
-  <table>
+  <table id="participantsTable">
     <thead>
       <tr>
-        <th>№</th>
+        <th>#</th>
         <th>Аватар</th>
-        <th>Никнейм</th>
-        <th>PP при вступлении</th>
+        <th>Ник</th>
+        <th>PP на старте</th>
         <th>PP сейчас</th>
       </tr>
     </thead>
-    <tbody id="table-body"></tbody>
+    <tbody></tbody>
   </table>
 
   <script>
-    if (user.username === "LLIaBKa" || user.username === "Shiretomi") {
-    document.getElementById("adminLink").style.display = "inline-block";
-    }
-    function toggleDropdown() {
-      const menu = document.getElementById('dropdownMenu');
-      const expanded = menu.style.display === 'block';
-      menu.style.display = expanded ? 'none' : 'block';
-      document.querySelector('.user-button').setAttribute('aria-expanded', !expanded);
-    }
-
-    function logout() {
-      localStorage.removeItem('osuUser');
-      window.location.href = '/';
-    }
-
     async function loadParticipants() {
       const res = await fetch("/participants");
-      let data = await res.json();
-
-      data.sort((a, b) => b.pp_now - a.pp_now);
-
-      const tbody = document.getElementById("table-body");
+      const data = await res.json();
+      const tbody = document.querySelector("#participantsTable tbody");
       tbody.innerHTML = "";
-      data.forEach((user, index) => {
-        const profileUrl = `https://osu.ppy.sh/users/${user.id}`;
-        const row = `<tr>
+
+      data.forEach((p, index) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
           <td>${index + 1}</td>
-          <td><a href="${profileUrl}" target="_blank"><img class="avatar" src="${user.avatar_url}" alt="avatar"/></a></td>
-          <td><a href="${profileUrl}" target="_blank">${user.username}</a></td>
-          <td>${user.pp_at_join.toFixed(2)}</td>
-          <td>${user.pp_now.toFixed(2)}</td>
-        </tr>`;
-        tbody.innerHTML += row;
+          <td><img src="${p.avatar_url}" width="40" height="40" style="border-radius: 50%;" /></td>
+          <td>${p.username}</td>
+          <td>${p.pp_at_join}</td>
+          <td>${p.pp_now}</td>
+        `;
+        tbody.appendChild(tr);
       });
     }
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const username = urlParams.get("user");
-    const joinBtn = document.getElementById('joinBtn');
-
-    if (username) {
-      fetch("/participants")
-        .then(res => res.json())
-        .then(data => {
-          const user = data.find(u => u.username === username);
-          if (user) {
-            localStorage.setItem('osuUser', JSON.stringify(user));
-            setupUser(user);
-          }
-        });
-    } else {
-      const savedUser = localStorage.getItem('osuUser');
-      if (savedUser) {
-        const user = JSON.parse(savedUser);
-        setupUser(user);
-      }
-    }
-    
     function setupUser(user) {
-      document.getElementById("userAvatar").src = user.avatar_url;
       document.getElementById("userName").textContent = user.username;
-      document.getElementById("profileBtn").onclick = () => {
-        window.open(`https://osu.ppy.sh/users/${user.id}`, '_blank');
-      }
-      document.getElementById("authButton").style.display = "none";
-      document.getElementById("userMenu").style.display = "block";
+      document.getElementById("userAvatar").src = user.avatar_url;
 
       fetch("/participants")
         .then(res => res.json())
         .then(data => {
-          const isInList = data.some(u => u.username === user.username);
+          const isInList = data.some(p => p.id == user.id);
           if (!isInList) {
-            joinBtn.style.display = "inline-block";
+            document.getElementById("joinBtn").style.display = "inline-block";
           } else {
             document.getElementById("joined").style.display = "block";
           }
+
+          if (user.username === "LLIaBKa" || user.username === "Shiretomi") {
+            document.getElementById("adminLink").style.display = "inline-block";
+          }
         });
-    }
-
-    joinBtn.addEventListener('click', async () => {
-      const user = JSON.parse(localStorage.getItem('osuUser'));
-      if (!user) {
-        alert("Сначала авторизуйтесь!");
-        return;
-      }
-
-      try {
-        const res = await fetch("/participants", {
+      
+      document.getElementById("joinBtn").onclick = () => {
+        fetch("/participants", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             id: user.id,
             username: user.username,
             avatar_url: user.avatar_url,
-            pp: user.pp_now
+            pp: user.statistics.pp
           })
-        });
-
-        if (res.ok) {
-          document.getElementById("joined").style.display = "block";
-          joinBtn.style.display = "none";
+        }).then(() => {
           loadParticipants();
-        } else {
-          alert("Ошибка при добавлении");
-        }
-      } catch (err) {
-        alert("Ошибка при отправке запроса");
-      }
-    });
+          document.getElementById("joinBtn").style.display = "none";
+          document.getElementById("joined").style.display = "block";
+        });
+      };
+    }
 
-    loadParticipants();
+    window.onload = () => {
+      loadParticipants();
+
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get("id");
+      const username = params.get("username");
+      const avatar_url = params.get("avatar_url");
+      const pp = params.get("pp");
+
+      if (id && username && avatar_url && pp) {
+        setupUser({
+          id,
+          username,
+          avatar_url,
+          statistics: { pp }
+        });
+      }
+    };
   </script>
 </body>
 </html>
