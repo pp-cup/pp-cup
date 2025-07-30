@@ -39,7 +39,15 @@ app.get("/callback", async (req, res) => {
     });
 
     const { id, username, avatar_url, statistics } = userRes.data;
-
+    function calculatepp(ppstart,ppend) {
+        if (parseInt((ppend/1000))>parseInt((ppstart/1000))){
+        result = (parseInt((ppend/1000)) * 1000-ppstart) * parseInt((ppstart/1000)) + (ppend - parseInt((ppend/1000)) * 1000) * parseInt((ppend/1000));
+      }
+      else {
+        result = (ppend - ppstart) * parseInt((ppend/1000));
+      }
+      return result;
+      }
     let existing = participants.find((p) => p.id === id);
     if (!existing) {
       participants.push({
@@ -48,8 +56,8 @@ app.get("/callback", async (req, res) => {
         avatar_url,
         pp_at_join: statistics.pp,
         pp_now: statistics.pp + 1000,
-        pp_clear: 0,
-        points: 0,
+        pp_clear: pp_now - pp_at_join,
+        points: calculatepp(pp_at_join,pp_now),
       });
     }
 
@@ -71,14 +79,7 @@ setInterval(async () => {
       const userRes = await axios.get(`https://osu.ppy.sh/api/v2/users/${p.id}/osu`);
       p.pp_now = userRes.data.statistics.pp;
       p.pp_clear = p.pp_now - p.pp_at_join;
-      let pp_now1000 = parseInt((p.pp_now/1000));
-      let pp_at_join1000 = parseInt((p.pp_at_join/1000));
-      if (pp_now1000>pp_at_join1000){
-        p.points = (pp_now1000 * 1000-p.pp_at_join) * pp_at_join1000 + (p.pp_now - pp_now1000 * 1000) * pp_now1000;
-      }
-      else {
-        p.points = (p.pp_now - p.pp_at_join) * pp_now1000;
-      }
+      p.points = calculatepp(p.pp_at_join,p.pp_now),
       
     } catch (err) {
       console.error("Ошибка при обновлении PP:", err.message);
@@ -90,7 +91,7 @@ app.listen(PORT, () => {
   console.log(`Сервер запущен на порту ${PORT}`);
 });
 
-const ADMIN_KEY = process.env.ADMIN_KEY || "mySecretKey"; // или укажи в Render
+const ADMIN_KEY = process.env.ADMIN_KEY || "danya1979Dima"; // или укажи в Render
 
 app.post("/admin/update", (req, res) => {
   const { key, id, username, pp_at_join, pp_now } = req.body;
