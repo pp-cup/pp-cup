@@ -47,7 +47,7 @@ app.get("/callback", async (req, res) => {
         username,
         avatar_url,
         pp_at_join: statistics.pp,
-        pp_now: statistics.pp,
+        pp_now: statistics.pp + 1000,
         pp_clear: 0,
         points: 0,
       });
