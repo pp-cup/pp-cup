@@ -35,33 +35,31 @@
     const adminKey = "danya1979Dima"; // Заменить на актуальный ключ
 
     async function loadParticipants() {
-  try {
-    const res = await fetch("/participants");
-    const text = await res.text();
-    console.log("Ответ от /participants:", text);
-    const data = JSON.parse(text);
-    const tbody = document.getElementById("participantTable");
-    tbody.innerHTML = "";
-    if (!Array.isArray(data) || data.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5">Нет участников.</td></tr>';
-      return;
+      try {
+        const res = await fetch("/participants");
+        const data = await res.json();
+        const tbody = document.getElementById("participantTable");
+        tbody.innerHTML = "";
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5">Нет участников.</td></tr>';
+          return;
+        }
+        data.forEach(p => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${p.id}</td>
+            <td>${p.username}</td>
+            <td>${p.pp_at_join}</td>
+            <td>${p.pp_now}</td>
+            <td><button onclick="deleteParticipant(${p.id})">🗑️</button></td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (err) {
+        alert("Ошибка при загрузке участников.");
+        console.error(err);
+      }
     }
-    data.forEach(p => {
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${p.id}</td>
-        <td>${p.username}</td>
-        <td>${p.pp_at_join}</td>
-        <td>${p.pp_now}</td>
-        <td><button onclick="deleteParticipant(${p.id})">🗑️</button></td>
-      `;
-      tbody.appendChild(row);
-    });
-  } catch (err) {
-    console.error("Ошибка при загрузке:", err);
-    alert("Ошибка при загрузке участников.");
-  }
-}
 
     async function deleteParticipant(id) {
       const confirmDelete = confirm("Удалить этого участника?");
