@@ -219,117 +219,105 @@
   </table>
 
   <script>
-    //if (user.username === "LLIaBKa" || user.username === "Shiretomi") {
-    //document.getElementById("adminLink").style.display = "inline-block";
-   // }
-    function toggleDropdown() {
-      const menu = document.getElementById('dropdownMenu');
-      const expanded = menu.style.display === 'block';
-      menu.style.display = expanded ? 'none' : 'block';
-      document.querySelector('.user-button').setAttribute('aria-expanded', !expanded);
-    }
+    const joinBtn = document.getElementById("joinBtn");
+    const joinedMessage = document.getElementById("joinedMessage");
+    const adminLink = document.getElementById("adminLink");
+    const userNameSpan = document.getElementById("userName");
+    const userAvatar = document.getElementById("userAvatar");
+    const tbody = document.querySelector("#participantsTable tbody");
 
-    function logout() {
-      localStorage.removeItem('osuUser');
-      window.location.href = '/';
-    }
+    let currentUser = null;
 
     async function loadParticipants() {
       const res = await fetch("/participants");
-      let data = await res.json();
-
-      data.sort((a, b) => b.pp_now - a.pp_now);
-
-      const tbody = document.getElementById("table-body");
+      const data = await res.json();
       tbody.innerHTML = "";
-      data.forEach((user, index) => {
-        const profileUrl = `https://osu.ppy.sh/users/${user.id}`;
-        const row = `<tr>
-          <td>${index + 1}</td>
-          <td><a href="${profileUrl}" target="_blank"><img class="avatar" src="${user.avatar_url}" alt="avatar"/></a></td>
-          <td><a href="${profileUrl}" target="_blank">${user.username}</a></td>
-          <td>${user.pp_at_join.toFixed(2)}</td>
-          <td>${user.pp_now.toFixed(2)}</td>
-        </tr>`;
-        tbody.innerHTML += row;
+
+      data.forEach((p, i) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${i + 1}</td>
+          <td><img src="${p.avatar_url}" alt="Аватар" width="40" height="40" style="border-radius:50%" /></td>
+          <td>${p.username}</td>
+          <td>${p.pp_at_join.toFixed(2)}</td>
+          <td>${p.pp_now.toFixed(2)}</td>
+        `;
+        tbody.appendChild(tr);
       });
-    }
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const username = urlParams.get("user");
-    const joinBtn = document.getElementById('joinBtn');
-
-    if (username) {
-      fetch("/participants")
-        .then(res => res.json())
-        .then(data => {
-          const user = data.find(u => u.username === username);
-          if (user) {
-            localStorage.setItem('osuUser', JSON.stringify(user));
-            setupUser(user);
-          }
-        });
-    } else {
-      const savedUser = localStorage.getItem('osuUser');
-      if (savedUser) {
-        const user = JSON.parse(savedUser);
-        setupUser(user);
+      // Проверим, есть ли текущий пользователь в списке
+      if (currentUser) {
+        const exists = data.some(p => p.id == currentUser.id);
+        if (exists) {
+          joinBtn.style.display = "none";
+          joinedMessage.style.display = "block";
+        } else {
+          joinBtn.style.display = "inline-block";
+          joinedMessage.style.display = "none";
+        }
       }
     }
-    
+
     function setupUser(user) {
-      document.getElementById("userAvatar").src = user.avatar_url;
-      document.getElementById("userName").textContent = user.username;
-      document.getElementById("profileBtn").onclick = () => {
-        window.open(`https://osu.ppy.sh/users/${user.id}`, '_blank');
-      }
-      document.getElementById("authButton").style.display = "none";
-      document.getElementById("userMenu").style.display = "block";
+      currentUser = user;
+      userNameSpan.textContent = user.username;
+      userAvatar.src = user.avatar_url;
 
-      fetch("/participants")
-        .then(res => res.json())
-        .then(data => {
-          const isInList = data.some(u => u.username === user.username);
-          if (!isInList) {
-            joinBtn.style.display = "inline-block";
-          } else {
-            document.getElementById("joined").style.display = "block";
-          }
-        });
-    }
-
-    joinBtn.addEventListener('click', async () => {
-      const user = JSON.parse(localStorage.getItem('osuUser'));
-      if (!user) {
-        alert("Сначала авторизуйтесь!");
-        return;
+      // Показать ссылку на редактирование только для определённых юзеров
+      if (user.username === "LLIaBKa" || user.username === "Shiretomi") {
+        adminLink.style.display = "inline-block";
       }
 
-      try {
-        const res = await fetch("/participants", {
+      loadParticipants();
+
+      joinBtn.onclick = async () => {
+        if (!currentUser) return;
+
+        const response = await fetch("/participants/add", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            id: user.id,
-            username: user.username,
-            avatar_url: user.avatar_url,
-            pp: user.pp_now
+            id: currentUser.id,
+            username: currentUser.username,
+            avatar_url: currentUser.avatar_url,
+            pp: currentUser.statistics.pp
           })
         });
 
-        if (res.ok) {
-          document.getElementById("joined").style.display = "block";
+        if (response.ok) {
           joinBtn.style.display = "none";
+          joinedMessage.style.display = "block";
           loadParticipants();
         } else {
-          alert("Ошибка при добавлении");
+          alert("Ошибка при добавлении участника");
         }
-      } catch (err) {
-        alert("Ошибка при отправке запроса");
-      }
-    });
+      };
+    }
 
-    loadParticipants();
+    window.onload = () => {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get("id");
+      const username = params.get("username");
+      const avatar_url = params.get("avatar_url");
+      const pp = params.get("pp");
+
+      if (id && username && avatar_url && pp) {
+        setupUser({
+          id,
+          username,
+          avatar_url,
+          statistics: { pp: Number(pp) }
+        });
+      } else {
+        // Если не авторизован, прячем кнопку и аватар
+        joinBtn.style.display = "none";
+        joinedMessage.style.display = "none";
+        userAvatar.style.display = "none";
+        userNameSpan.textContent = "Гость";
+      }
+
+      loadParticipants();
+    };
   </script>
 </body>
 </html>
