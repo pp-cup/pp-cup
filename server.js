@@ -1,182 +1,280 @@
-const express = require("express");
-const axios = require("axios");
-const dotenv = require("dotenv");
-
-dotenv.config();
+require('dotenv').config();
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const axios = require('axios');
+const session = require('express-session');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-let participants = [];
-let osuAccessToken = null;
+app.use(express.static('public'));
+app.use(express.json());
+app.use(session({
+  secret: 'some secret here', // Лучше вынести в .env
+  resave: false,
+  saveUninitialized: true,
+}));
 
-// Функция для получения access token (client_credentials flow)
+const DB_PATH = path.join(__dirname, 'data', 'database.json');
+
+// === Работа с данными ===
+function loadData() {
+  if (!fs.existsSync(DB_PATH)) return [];
+  const raw = fs.readFileSync(DB_PATH);
+  return JSON.parse(raw);
+}
+
+function saveData(data) {
+  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+}
+
+// === osu! API токен ===
+let osuAccessToken = null;
+const osuClientId = process.env.OSU_CLIENT_ID;
+const osuClientSecret = process.env.OSU_CLIENT_SECRET;
+const redirectUri = process.env.REDIRECT_URI || 'https://pp-cup-ppcup-727c.twc1.net/auth/callback';
+
 async function fetchOsuAccessToken() {
   try {
-    const res = await axios.post(
-      "https://osu.ppy.sh/oauth/token",
-      {
-        client_id: process.env.OSU_CLIENT_ID,
-        client_secret: process.env.OSU_CLIENT_SECRET,
-        grant_type: "client_credentials",
-        scope: "public",
-      },
-      { headers: { "Content-Type": "application/json" } }
-    );
-    osuAccessToken = res.data.access_token;
-    console.log("osu! access token получен");
-  } catch (err) {
-    console.error("Не удалось получить osu! токен:", err.message);
-  }
-}
-
-// Функция расчёта очков
-function calculatePoints(pp_start, pp_end) {
-  let points = 0;
-  let from = Math.floor(pp_start);
-  let to = Math.floor(pp_end);
-
-  let startK = Math.floor(from / 1000);
-  let endK = Math.floor(to / 1000);
-
-  for (let k = startK; k <= endK; k++) {
-    let lowerBound = k * 1000;
-    let upperBound = (k + 1) * 1000;
-
-    let rangeStart = Math.max(from, lowerBound);
-    let rangeEnd = Math.min(to, upperBound);
-
-    if (rangeEnd > rangeStart) {
-      let gain = rangeEnd - rangeStart;
-      points += gain * k;
-    }
-  }
-
-  return points;
-}
-
-app.use(express.static("public"));
-app.use(express.json());
-
-app.get("/login", (req, res) => {
-  const redirect = `https://osu.ppy.sh/oauth/authorize?client_id=${process.env.OSU_CLIENT_ID}&redirect_uri=${process.env.OSU_REDIRECT_URI}&response_type=code&scope=identify`;
-  res.redirect(redirect);
-});
-
-app.get("/callback", async (req, res) => {
-  const code = req.query.code;
-  try {
-    const tokenRes = await axios.post(
-      "https://osu.ppy.sh/oauth/token",
-      {
-        client_id: process.env.OSU_CLIENT_ID,
-        client_secret: process.env.OSU_CLIENT_SECRET,
-        code,
-        grant_type: "authorization_code",
-        redirect_uri: process.env.OSU_REDIRECT_URI,
-      },
-      { headers: { "Content-Type": "application/json" } }
-    );
-
-    const { access_token } = tokenRes.data;
-
-    const userRes = await axios.get("https://osu.ppy.sh/api/v2/me", {
-      headers: { Authorization: `Bearer ${access_token}` },
+    const response = await axios.post('https://osu.ppy.sh/oauth/token', {
+      client_id: osuClientId,
+      client_secret: osuClientSecret,
+      grant_type: 'client_credentials',
+      scope: 'public',
     });
 
-    const { id, username, avatar_url, statistics } = userRes.data;
-
-    let existing = participants.find((p) => p.id === id);
-    if (!existing) {
-      const pp_at_join = statistics.pp;
-      const pp_now = pp_at_join + 1000; // для тестов
-      const pp_clear = pp_now - pp_at_join;
-      const points = calculatePoints(pp_at_join, pp_now);
-
-      participants.push({
-        id,
-        username,
-        avatar_url,
-        pp_at_join,
-        pp_now,
-        pp_clear,
-        points,
-      });
-    }
-
-    res.redirect(`/index.html?user=${encodeURIComponent(username)}`);
-  } catch (err) {
-    console.error(err);
-    res.send("Ошибка авторизации.");
+    osuAccessToken = response.data.access_token;
+    console.log('osu! access token получен');
+  } catch (error) {
+    console.error('Ошибка получения токена:', error.response?.data || error.message);
   }
-});
+}
 
-app.get("/participants", (req, res) => {
-  res.json(participants);
-});
+function calculatePoints(ppStart, ppEnd) {
+  const start = Math.floor(ppStart);
+  const end = Math.floor(ppEnd);
 
-// Автообновление pp_now каждые 10 минут (600000 мс)
-setInterval(async () => {
+  if (end <= start) return 0;
+
+  let points = 0;
+  const floorStart = Math.floor(start / 1000) * 1000;
+  const floorEnd = Math.floor(end / 1000) * 1000;
+
+  for (let thousand = floorStart; thousand <= floorEnd; thousand += 1000) {
+    const lower = Math.max(start, thousand);
+    const upper = Math.min(end, thousand + 999.999);
+    const delta = upper - lower;
+
+    if (delta > 0) {
+      const multiplier = (thousand) / 1000;
+      points += delta * multiplier;
+    }
+  }
+
+  return Math.round(points);
+}
+
+function updatePositions(data) {
+  data.sort((a, b) => b.Points - a.Points);
+
+  let lastPoints = null;
+  let lastPosition = 0;
+
+  data.forEach((participant, index) => {
+    if (participant.Points !== lastPoints) {
+      lastPosition = index + 1;
+      lastPoints = participant.Points;
+    }
+    participant.Position = lastPosition;
+  });
+}
+
+// === Обновление PP участников ===
+async function updateParticipantsPP() {
   if (!osuAccessToken) {
-    console.log("Нет токена osu! — пытаюсь получить...");
+    console.warn('Нет osuAccessToken, попытка получить заново...');
     await fetchOsuAccessToken();
     if (!osuAccessToken) return;
   }
 
-  for (let p of participants) {
+  const data = loadData();
+
+  for (let participant of data) {
     try {
-      const userRes = await axios.get(`https://osu.ppy.sh/api/v2/users/${p.id}/osu`, {
-        headers: { Authorization: `Bearer ${osuAccessToken}` },
+      const res = await axios.get(`https://osu.ppy.sh/api/v2/users/${participant.Nickname}/osu`, {
+        headers: {
+          Authorization: `Bearer ${osuAccessToken}`,
+        }
       });
-      p.pp_now = userRes.data.statistics.pp;
-      p.pp_clear = p.pp_now - p.pp_at_join;
-      p.points = calculatePoints(p.pp_at_join, p.pp_now);
-      console.log(`[UPDATE] ${p.username}: now=${p.pp_now}, at_join=${p.pp_at_join}, clear=${p.pp_clear}, points=${p.points}`);
+
+      const currentPP = res.data.statistics.pp;
+
+      participant.PPend = currentPP;
+      participant.Points = calculatePoints(parseFloat(participant.PPstart), parseFloat(currentPP));
     } catch (err) {
-      console.error("Ошибка при обновлении PP:", err.message);
-      // При 401 попробуем получить новый токен
-      if (err.response && err.response.status === 401) {
-        osuAccessToken = null;
-      }
+      console.error(`Ошибка обновления ${participant.Nickname}:`, err.response?.data || err.message);
     }
   }
-}, 10  * 1000);
 
-const ADMIN_KEY = process.env.ADMIN_KEY || "danya1979Dima";
+  updatePositions(data);
+  saveData(data);
+}
 
-app.post("/admin/update", (req, res) => {
-  const { key, id, username, pp_at_join, pp_now } = req.body;
-  if (key !== ADMIN_KEY) return res.status(403).send("Access denied");
-
-  const user = participants.find(p => p.id === id);
-  if (!user) return res.status(404).send("User not found");
-
-  user.username = username;
-  user.pp_at_join = pp_at_join;
-  user.pp_now = pp_now;
-  user.pp_clear = pp_now - pp_at_join;
-  user.points = calculatePoints(pp_at_join, pp_now);
-
-  res.send("Updated");
+// === Автоматический запуск ===
+fetchOsuAccessToken().then(() => {
+  updateParticipantsPP();
+  setInterval(updateParticipantsPP, 10 * 60 * 1000); // каждые 10 минут
 });
 
-app.get("/admin/delete", (req, res) => {
-  const { id, key } = req.query;
-  if (key !== ADMIN_KEY) return res.status(403).send("Access denied");
+// === API ===
 
-  participants = participants.filter(p => p.id != id);
-  res.send("Deleted");
+app.get('/api/data', (req, res) => {
+  const data = loadData();
+
+  // Сортируем по очкам и обновляем позиции
+  data.sort((a, b) => b.Points - a.Points);
+
+  let lastPoints = null;
+  let lastPosition = 0;
+
+  data.forEach((participant, index) => {
+    if (participant.Points !== lastPoints) {
+      lastPosition = index + 1;
+      lastPoints = participant.Points;
+    }
+    participant.Position = lastPosition;
+  });
+
+  // Сохраняем обновленные позиции в файл
+  saveData(data);
+
+  res.json(data);
 });
 
-app.get("/admin/clear", (req, res) => {
-  const { key } = req.query;
-  if (key !== ADMIN_KEY) return res.status(403).send("Access denied");
-
-  participants = [];
-  res.send("All participants cleared");
+app.get('/api/me', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Not logged in' });
+  res.json(req.session.user);
 });
 
-app.listen(PORT, async () => {
-  console.log(`Сервер запущен на порту ${PORT}`);
-  await fetchOsuAccessToken();
+// === OAuth: авторизация ===
+app.get('/auth/login', (req, res) => {
+  const authUrl = `https://osu.ppy.sh/oauth/authorize?client_id=${osuClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=public`;
+  res.redirect(authUrl);
+});
+
+app.get('/auth/callback', async (req, res) => {
+  const code = req.query.code;
+  if (!code) return res.status(400).send('No code provided');
+
+  try {
+    const tokenResponse = await axios.post('https://osu.ppy.sh/oauth/token', {
+      client_id: osuClientId,
+      client_secret: osuClientSecret,
+      code,
+      grant_type: 'authorization_code',
+      redirect_uri: redirectUri,
+    });
+
+    const accessToken = tokenResponse.data.access_token;
+
+    const userResponse = await axios.get('https://osu.ppy.sh/api/v2/me', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    req.session.user = userResponse.data;
+    res.redirect('/');
+
+  } catch (error) {
+    console.error(error.response?.data || error.message);
+    res.status(500).send('Authorization error');
+  }
+});
+
+app.get('/auth/logout', (req, res) => {
+  req.session.destroy(err => {
+    if (err) {
+      console.error(err);
+      return res.status(500).send('Ошибка выхода');
+    }
+    res.redirect('/');
+  });
+});
+app.delete('/api/participant/:nickname', (req, res) => {
+  if (!req.session.user || req.session.user.username !== 'LLIaBKa') {
+    return res.status(403).json({ error: 'Not authorized' });
+  }
+
+  let data = loadData();
+  data = data.filter(p => p.Nickname !== req.params.nickname);
+  saveData(data);
+
+  res.json({ success: true });
+});
+
+// Очистить всю таблицу
+app.delete('/api/participants', (req, res) => {
+  if (!req.session.user || req.session.user.username !== 'LLIaBKa') {
+    return res.status(403).json({ error: 'Not authorized' });
+  }
+
+  saveData([]);
+  res.json({ success: true });
+});
+app.get('/api/me', (req, res) => {
+  if (!req.session.user) return res.status(401).json({});
+  res.json(req.session.user);
+});
+// === Участие ===
+app.post('/api/participate', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Not logged in' });
+
+  const user = req.session.user;
+  let data = loadData();
+
+  if (data.some(p => p.Nickname === user.username)) {
+    return res.status(400).json({ error: 'User already participating' });
+  }
+
+  const ppStart = user.statistics?.pp || 0;
+  const ppEnd = ppStart + 1000; // Для тестов: добавляем 1000 PP
+
+  const newEntry = {
+    UserID: user.id,
+    Avatar: user.avatar_url || '',
+    Nickname: user.username,
+    PPstart: ppStart,
+    PPend: ppEnd,
+    Points: calculatePoints(ppStart, ppEnd)
+  };
+
+  data.push(newEntry);
+  updatePositions(data);
+  saveData(data);
+
+  res.json({ success: true, participant: newEntry });
+});
+
+app.post('/api/unparticipate', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Not logged in' });
+
+  const user = req.session.user;
+  let data = loadData();
+
+  const newData = data.filter(p => p.Nickname !== user.username);
+
+  if (newData.length === data.length) {
+    return res.status(404).json({ error: 'User not found in participants' });
+  }
+
+  updatePositions(newData);
+  saveData(newData);
+  res.json({ success: true });
+});
+
+// === Запуск сервера ===
+app.listen(PORT, () => {
+  console.log(`Server running on https://pp-cup-ppcup-727c.twc1.net:${PORT}`);
 });
